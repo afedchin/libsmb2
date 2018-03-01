@@ -21,6 +21,10 @@
 
 #include "smb2.h"
 
+#ifdef _WIN32
+#include "win-sockets.h"
+#endif // _WIN32
+
 const char *nterror_to_str(uint32_t status) {
         switch (status) {
         case SMB2_STATUS_SUCCESS:

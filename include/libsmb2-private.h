@@ -106,7 +106,8 @@ enum smb2_sec {
 };
 
 struct smb2_context {
-        int fd;
+
+        socket_type fd;
         int is_connected;
 
         enum smb2_sec sec;
@@ -116,6 +117,7 @@ struct smb2_context {
         const char *server;
         const char *share;
         const char *user;
+        const char *password;
 
         smb2_command_cb connect_cb;
         void *connect_data;
@@ -220,7 +222,7 @@ void win_to_timeval(uint64_t smb2_time, struct smb2_timeval *tv);
 uint64_t timeval_to_win(struct smb2_timeval *tv);
 
 void smb2_set_error(struct smb2_context *smb2, const char *error_string,
-                    ...) __attribute__((format(printf, 2, 3)));
+                    ...);
 
 void *smb2_alloc_init(struct smb2_context *smb2, size_t size);
 void *smb2_alloc_data(struct smb2_context *smb2, void *memctx, size_t size);

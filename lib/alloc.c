@@ -89,7 +89,14 @@ smb2_alloc_data(struct smb2_context *smb2, void *memctx, size_t size)
         }
         memset(ptr, 0, size);
 
+#ifndef _WIN32
         hdr = container_of(memctx, struct smb2_alloc_header, buf);
+#else
+        {
+          const char* __mptr = memctx;
+          hdr = (struct smb2_alloc_header*)((char *)__mptr - offsetof(struct smb2_alloc_header, buf));
+        }
+#endif // !_WIN32
 
         ptr->next = hdr->mem;
         hdr->mem = ptr;
@@ -107,7 +114,14 @@ smb2_free_data(struct smb2_context *smb2, void *ptr)
                 return;
         }
 
+#ifndef _WIN32
         hdr = container_of(ptr, struct smb2_alloc_header, buf);
+#else
+        {
+          const char* __mptr = ptr;
+          hdr = (struct smb2_alloc_header*)((char *)__mptr - offsetof(struct smb2_alloc_header, buf));
+        }
+#endif // !_WIN32
 
         while ((ent = hdr->mem)) {
                 hdr->mem = ent->next;

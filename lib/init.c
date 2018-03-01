@@ -50,6 +50,10 @@
 
 #define MAX_URL_SIZE 256
 
+#ifdef _WIN32
+#include "win-sockets.h"
+#endif // _WIN32
+
 static int
 smb2_parse_args(struct smb2_context *smb2, const char *args)
 {
@@ -128,9 +132,18 @@ struct smb2_url *smb2_parse_url(struct smb2_context *smb2, const char *url)
         /* user */
         if ((tmp = strchr(ptr, '@')) != NULL) {
                 *(tmp++) = '\0';
-                u->user = strdup(ptr);
+                char* user_pass = strdup(ptr);
+                /* password */
+                char *pwd;
+                if ((pwd = strchr(user_pass, ':')) != NULL) {
+                        *(pwd++) = '\0';
+                        u->user = strdup(user_pass);
+                        u->password = strdup(pwd);
+                } else {
+                        u->user = strdup(ptr);
+                }
                 ptr = tmp;
-	}
+        }
         /* server */
         if ((tmp = strchr(ptr, '/')) != NULL) {
                 *(tmp++) = '\0';
@@ -182,7 +195,7 @@ struct smb2_context *smb2_init_context(void)
         smb2->fd = -1;
         smb2->sec = SMB2_SEC_UNDEFINED;
 
-        snprintf(smb2->client_guid, 16, "libnfs-%d", getpid());
+        snprintf(smb2->client_guid, 16, "libsmb2-%d", getpid());
         
         return smb2;
 }
@@ -289,5 +302,13 @@ void smb2_set_user(struct smb2_context *smb2, const char *user)
                 free(discard_const(smb2->user));
         }
         smb2->user = strdup(user);
+}
+
+void smb2_set_password(struct smb2_context *smb2, const char *password)
+{
+        if (smb2->password) {
+                free(discard_const(smb2->password));
+        }
+        smb2->password = strdup(password);
 }
 

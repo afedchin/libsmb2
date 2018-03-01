@@ -32,7 +32,11 @@
 #endif
 
 #include <errno.h>
+#ifndef _WIN32
 #include <poll.h>
+#else
+#include "win-sockets.h"
+#endif // !_WIN32
 
 #include "smb2.h"
 #include "libsmb2.h"

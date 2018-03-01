@@ -56,13 +56,19 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
+#ifdef HAVE_GSSAPI_GSSAPI_H
 #include <gssapi/gssapi.h>
+#endif
 
 #include "slist.h"
 #include "smb2.h"
 #include "libsmb2.h"
 #include "libsmb2-raw.h"
 #include "libsmb2-private.h"
+
+#ifdef _WIN32
+#include "win-sockets.h"
+#endif // _WIN32
 
 const smb2_file_id compound_file_id = {
         0xff, 0xff, 0xff, 0xff,  0xff, 0xff, 0xff, 0xff,
@@ -642,6 +648,7 @@ negotiate_cb(struct smb2_context *smb2, int status,
         uint32_t maj, min;
         int ret;
         gss_buffer_desc user;
+        gss_buffer_desc passwd;
         gss_OID_set_desc mechOidSet;
         gss_OID_set_desc wantMech;
 
@@ -706,11 +713,19 @@ negotiate_cb(struct smb2_context *smb2, int status,
 
         /* TODO: the proper mechanism (SPNEGO vs NTLM vs KRB5) should be
          * selected based on the SMB negotiation flags */
-        c_data->auth_data->mech_type = &gss_mech_spnego;
+        c_data->auth_data->mech_type = &spnego_mech_ntlmssp;// &gss_mech_spnego;
         c_data->auth_data->cred = GSS_C_NO_CREDENTIAL;
 
-        user.value = discard_const(c_data->user);
-        user.length = strlen(c_data->user);
+        // create user@domain
+        char *user2srv;
+        if (asprintf(&user2srv, "%s@%s", smb2->user, c_data->server) < 0) {
+                smb2_set_error(smb2, "Failed to allocate user string");
+                c_data->cb(smb2, -ENOMEM, NULL, c_data->cb_data);
+                free_c_data(c_data);
+                return;
+        }
+        user.value = discard_const(user2srv);
+        user.length = strlen(user2srv);
 
         /* create a name for the user */
         maj = gss_import_name(&min, &user, GSS_C_NT_USER_NAME,
@@ -725,11 +740,19 @@ negotiate_cb(struct smb2_context *smb2, int status,
 
         /* Create creds for the user */
         mechOidSet.count = 1;
-        mechOidSet.elements = discard_const(&gss_mech_spnego);
+        mechOidSet.elements = discard_const(&spnego_mech_ntlmssp);
 
-        maj = gss_acquire_cred(&min, c_data->auth_data->user_name, 0,
-                               &mechOidSet, GSS_C_INITIATE,
-                               &c_data->auth_data->cred, NULL, NULL);
+        /*if (!smb2->password) {*/
+                maj = gss_acquire_cred(&min, c_data->auth_data->user_name, 0, // GSS_C_INDEFINITE
+                                       &mechOidSet, GSS_C_INITIATE,
+                                       &c_data->auth_data->cred, NULL, NULL);
+        /*} else {
+                passwd.length = strlen(smb2->password);
+                passwd.value = discard_const(smb2->password);
+                maj = gss_acquire_cred_with_password(&min, c_data->auth_data->user_name, &passwd,
+                                                     GSS_C_INDEFINITE, &mechOidSet, GSS_C_INITIATE,
+                                                     &c_data->auth_data->cred, NULL, NULL);
+        }*/
         if (maj != GSS_S_COMPLETE) {
                 set_gss_error(smb2, "gss_acquire_cred", maj, min);
                 c_data->cb(smb2, -ENOMEM, NULL, c_data->cb_data);
@@ -744,15 +767,14 @@ negotiate_cb(struct smb2_context *smb2, int status,
                 } else if (smb2->sec == SMB2_SEC_NTLMSSP) {
                         wantMech.elements = discard_const(&spnego_mech_ntlmssp);
                 }
-
-                maj = gss_set_neg_mechs(&min, c_data->auth_data->cred,
+                /*maj = gss_set_neg_mechs(&min, c_data->auth_data->cred,
                                         &wantMech);
                 if (GSS_ERROR(maj)) {
                         set_gss_error(smb2, "gss_set_neg_mechs", maj, min);
                         c_data->cb(smb2, -ENOMEM, NULL, c_data->cb_data);
                         free_c_data(c_data);
                         return;
-                }
+                }*/
         }
 
         if ((ret = send_session_setup_request(smb2, c_data, NULL)) < 0) {

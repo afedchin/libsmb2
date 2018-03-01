@@ -53,6 +53,13 @@ struct smb2dirent {
         struct smb2_stat_64 st;
 };
 
+#ifdef _WIN32
+#include <winsock2.h>
+typedef SOCKET socket_type;
+#else
+typedef int socket_type;
+#endif
+
 /*
  * Create an SMB2 context.
  * Function returns
@@ -73,7 +80,7 @@ void smb2_destroy_context(struct smb2_context *smb2);
 /*
  * Returns the file descriptor that libsmb2 uses.
  */
-int smb2_get_fd(struct smb2_context *smb2);
+socket_type smb2_get_fd(struct smb2_context *smb2);
 /*
  * Returns which events that we need to poll for for the smb2 file descriptor.
  */
@@ -104,6 +111,11 @@ void smb2_set_security_mode(struct smb2_context *smb2, uint16_t security_mode);
  */
 void smb2_set_user(struct smb2_context *smb2, const char *user);
 
+/*
+ * Set the password for an user that we will try to authenticate as.
+ * Default is no password
+ */
+void smb2_set_password(struct smb2_context *smb2, const char *password);
 
 /*
  * Returns the client_guid for this context.
@@ -195,6 +207,7 @@ const char *smb2_get_error(struct smb2_context *smb2);
 struct smb2_url {
         const char *domain;
         const char *user;
+        const char *password;
         const char *server;
         const char *share;
         const char *path;

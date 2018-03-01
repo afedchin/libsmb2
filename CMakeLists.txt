@@ -22,14 +22,15 @@ include(cmake/ConfigureChecks.cmake)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR}
                     include
-                    include/smb2)
+                    include/smb2
+                    ${GSSAPI_INCLUDE_DIRS})
 
 set(CORE_LIBRARIES smb2)
 set(core_DEPENDS ${GSSAPI_LIBRARIES} CACHE STRING "" FORCE)
 
-if(CMAKE_SYSTEM_NAME STREQUAL Windows)
+if(CMAKE_SYSTEM_NAME MATCHES Windows)
   list(APPEND CORE_LIBRARIES -lws2_32.lib)
-  add_subdirectory(win32)
+  add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS -DHAVE_SOCKADDR_IN6)
 elseif(CMAKE_SYSTEM_NAME STREQUAL Solaris)
   find_library(SOCKET_LIBRARY socket)
   find_library(NSL_LIBRARY nsl)

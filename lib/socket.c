@@ -59,10 +59,14 @@
 #include <unistd.h>
 #endif
 
-#include <endian.h>
+#include "portable-endian.h"
 #include <errno.h>
 #include <fcntl.h>
+#ifndef _WIN32
 #include <sys/socket.h>
+#else
+#include "win-sockets.h"
+#endif // !_WIN32
 
 #include "slist.h"
 #include "smb2.h"
@@ -99,7 +103,7 @@ smb2_which_events(struct smb2_context *smb2)
 	return events;
 }
 
-int smb2_get_fd(struct smb2_context *smb2)
+socket_type smb2_get_fd(struct smb2_context *smb2)
 {
         return smb2->fd;
 }
@@ -500,7 +504,7 @@ smb2_service(struct smb2_context *smb2, int revents)
 }
 
 static void
-set_nonblocking(int fd)
+set_nonblocking(socket_type fd)
 {
 #if defined(WIN32)
 	unsigned long opt = 1;
@@ -513,7 +517,7 @@ set_nonblocking(int fd)
 }
 
 static int
-set_tcp_sockopt(int sockfd, int optname, int value)
+set_tcp_sockopt(socket_type sockfd, int optname, int value)
 {
 	int level;
 #ifndef SOL_TCP
@@ -625,7 +629,11 @@ smb2_connect_async(struct smb2_context *smb2, const char *server,
 	set_tcp_sockopt(smb2->fd, TCP_NODELAY, 1);
         
 	if (connect(smb2->fd, (struct sockaddr *)&ss, socksize) != 0
+#ifndef _WIN32
 		&& errno != EINPROGRESS) {
+#else
+		&& WSAGetLastError() != WSAEWOULDBLOCK) {
+#endif
 		smb2_set_error(smb2, "Connect failed with errno : "
 			"%s(%d)", strerror(errno), errno);
 		close(smb2->fd);

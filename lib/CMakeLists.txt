@@ -19,6 +19,7 @@ set(SOURCES alloc.c
             smb2-cmd-tree-disconnect.c
             smb2-cmd-write.c
             smb2-data-file-info.c
+            smb2-data-filesystem-info.c
             smb2-data-security-descriptor.c
             socket.c
             sync.c
@@ -30,7 +31,11 @@ target_link_libraries(smb2 PUBLIC ${core_DEPENDS})
 set_target_properties(smb2 PROPERTIES
                            VERSION ${PROJECT_VERSION}
                            SOVERSION ${SOVERSION})
-add_definitions("-D_U_=__attribute__((unused))")
+if(NOT MSVC)
+  add_definitions("-D_U_=__attribute__((unused))")
+else()
+  add_definitions("-D_U_=")
+endif()
 
 install(TARGETS smb2 EXPORT smb2
                      RUNTIME DESTINATION bin
