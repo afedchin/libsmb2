@@ -196,6 +196,7 @@ struct smb2_context *smb2_init_context(void)
         smb2->sec = SMB2_SEC_UNDEFINED;
 
         snprintf(smb2->client_guid, 16, "libsmb2-%d", getpid());
+
         
         return smb2;
 }

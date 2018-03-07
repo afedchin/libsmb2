@@ -600,13 +600,10 @@ send_session_setup_request(struct smb2_context *smb2,
                                    &c_data->auth_data->context,
                                    c_data->auth_data->target_name,
                                    discard_const(c_data->auth_data->mech_type),
-                                   GSS_C_SEQUENCE_FLAG |
-                                   GSS_C_MUTUAL_FLAG |
-                                   GSS_C_REPLAY_FLAG |
-                                   0, //GSS_C_INTEG_FLAG,
-                                   GSS_C_INDEFINITE,
+                                   GSS_C_SEQUENCE_FLAG | GSS_C_MUTUAL_FLAG | GSS_C_REPLAY_FLAG /*| GSS_C_INTEG_FLAG*/,
+                                   0, //GSS_C_INDEFINITE,
                                    GSS_C_NO_CHANNEL_BINDINGS,
-                                   input_token,
+                                   input_token, 
                                    NULL,
                                    &c_data->auth_data->output_token,
                                    NULL,
@@ -616,7 +613,7 @@ send_session_setup_request(struct smb2_context *smb2,
                 return -1;
         }
 
-        if (maj == GSS_S_CONTINUE_NEEDED) {
+        if (maj == GSS_S_CONTINUE_NEEDED || maj == GSS_S_COMPLETE) {
                 struct smb2_pdu *pdu;
 
                 /* Session setup request. */
