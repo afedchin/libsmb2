@@ -56,8 +56,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <gssapi/gssapi.h>
 
+#include "asprintf.h"
 #include "slist.h"
 #include "smb2.h"
 #include "libsmb2.h"
@@ -69,6 +69,14 @@
 #else
 #include "krb5-wrapper.h"
 #endif
+
+#ifndef O_SYNC
+#ifndef O_DSYNC
+#define O_DSYNC		040000
+#endif // !O_DSYNC
+#define __O_SYNC	020000000
+#define O_SYNC		(__O_SYNC|O_DSYNC)
+#endif // !O_SYNC
 
 const smb2_file_id compound_file_id = {
         0xff, 0xff, 0xff, 0xff,  0xff, 0xff, 0xff, 0xff,
@@ -564,7 +572,8 @@ negotiate_cb(struct smb2_context *smb2, int status,
 #ifndef HAVE_LIBKRB5
         c_data->auth_data = ntlmssp_init_context(smb2->user,
                                                  smb2->password,
-                                                 NULL, NULL,
+                                                 smb2->domain, 
+                                                 smb2->workstation,
                                                  smb2->client_challenge);
 #else
         c_data->auth_data = krb5_negotiate_reply(smb2, c_data->server,

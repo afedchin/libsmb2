@@ -149,10 +149,11 @@ smb2_process_session_setup_fixed(struct smb2_context *smb2,
         /* Update session ID to use for future PDUs */
         smb2->session_id = smb2->hdr.session_id;
 
-        if (rep->security_buffer_length == 0) {
+        /* if status is SUCCESS there is no securyty buffer */
+        if (smb2->hdr.status && rep->security_buffer_length == 0) {
                 return 0;
         }
-        if (rep->security_buffer_offset < SMB2_HEADER_SIZE +
+        if (smb2->hdr.status && rep->security_buffer_offset < SMB2_HEADER_SIZE +
             (SMB2_SESSION_SETUP_REPLY_SIZE & 0xfffe)) {
                 smb2_set_error(smb2, "Securty buffer overlaps with "
                                "Session Setup reply header");
