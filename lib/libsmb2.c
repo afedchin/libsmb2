@@ -56,6 +56,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <sys/socket.h>
 
 #include "asprintf.h"
 #include "slist.h"
